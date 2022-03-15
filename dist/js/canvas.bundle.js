@@ -97,79 +97,185 @@
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils */ "./src/js/utils.js");
 /* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_utils__WEBPACK_IMPORTED_MODULE_0__);
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
-
-function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
-
 
 var canvas = document.querySelector('canvas');
 var c = canvas.getContext('2d');
 canvas.width = innerWidth;
 canvas.height = innerHeight;
-var mouse = {
-  x: innerWidth / 2,
-  y: innerHeight / 2
-};
-var colors = ['#2185C5', '#7ECEFD', '#FFF6E5', '#FF7F66']; // Event Listeners
-
-addEventListener('mousemove', function (event) {
-  mouse.x = event.clientX;
-  mouse.y = event.clientY;
-});
+var colors = ['#2185C5', '#7ECEFD', '#FFF6E5', '#FF7F66'];
 addEventListener('resize', function () {
   canvas.width = innerWidth;
   canvas.height = innerHeight;
   init();
 }); // Objects
 
-var _Object = /*#__PURE__*/function () {
-  function Object(x, y, radius, color) {
-    _classCallCheck(this, Object);
+function Star(x, y, radius, color) {
+  this.x = x;
+  this.y = y;
+  this.radius = radius;
+  this.color = color;
+  this.velocity = {
+    // x: utils.randomIntFromRange(-4, 4),
+    x: (Math.random() - 0.5) * 8,
+    y: 3
+  };
+  this.friction = 0.8;
+  this.gravity = 0.3;
+}
 
-    this.x = x;
-    this.y = y;
-    this.radius = radius;
-    this.color = color;
+Star.prototype.draw = function () {
+  // c.save()
+  c.beginPath();
+  c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+  c.fillStyle = this.color;
+  c.shadowColor = '#E3EAEF';
+  c.shadowBlur = 20;
+  c.fill();
+  c.closePath(); // c.restore()
+};
+
+Star.prototype.update = function () {
+  this.draw(); // when ball hits bottom of screen
+
+  if (this.y + this.radius + this.velocity.y > canvas.height - groundHeight) {
+    this.velocity.y = -this.velocity.y * this.friction;
+    this.shatter();
+  } else {
+    this.velocity.y += this.gravity;
+  } // Hits side of screen
+
+
+  if (this.x + this.radius + this.velocity.x > canvas.width || this.x - this.radius <= 0) {
+    this.velocity.x = -this.velocity.x * this.friction;
+    this.shatter();
   }
 
-  _createClass(Object, [{
-    key: "draw",
-    value: function draw() {
-      c.beginPath();
-      c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-      c.fillStyle = this.color;
-      c.fill();
-      c.closePath();
-    }
-  }, {
-    key: "update",
-    value: function update() {
-      this.draw();
-    }
-  }]);
+  this.x += this.velocity.x;
+  this.y += this.velocity.y;
+};
 
-  return Object;
-}(); // Implementation
+Star.prototype.shatter = function () {
+  this.radius -= 3;
+
+  for (var i = 0; i < 8; i++) {
+    miniStars.push(new miniStar(this.x, this.y, 2));
+  }
+}; //  Inheritence
 
 
-var objects;
+function miniStar(x, y, radius, color) {
+  Star.call(this, x, y, radius, color);
+  this.velocity = {
+    x: _utils__WEBPACK_IMPORTED_MODULE_0___default.a.randomIntFromRange(-5, 5),
+    y: _utils__WEBPACK_IMPORTED_MODULE_0___default.a.randomIntFromRange(-15, 15)
+  };
+  this.friction = 0.8;
+  this.gravity = 0.5;
+  this.ttl = 100;
+  this.opacity = 1;
+}
+
+miniStar.prototype.draw = function () {
+  // c.save()
+  c.beginPath();
+  c.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+  c.fillStyle = "rgba(227, 234, 239, ".concat(this.opacity, ")");
+  c.shadowColor = '#E3EAEF';
+  c.shadowBlur = 20;
+  c.fill();
+  c.closePath(); // c.restore()
+};
+
+miniStar.prototype.update = function () {
+  this.draw(); // when ball hits bottom of screen
+
+  if (this.y + this.radius + this.velocity.y > canvas.height - groundHeight) {
+    this.velocity.y = -this.velocity.y * this.friction;
+  } else {
+    this.velocity.y += this.gravity;
+  }
+
+  this.x += this.velocity.x;
+  this.y += this.velocity.y;
+  this.ttl -= 1;
+  this.opacity -= 1 / this.ttl;
+};
+
+function createMountainRange(mountainAmmount, height, color) {
+  for (var i = 0; i < mountainAmmount; i++) {
+    var mountainWidth = canvas.width / mountainAmmount;
+    c.beginPath();
+    c.moveTo(i * mountainWidth, canvas.height);
+    c.lineTo(i * mountainWidth + mountainWidth + 325, canvas.height);
+    c.lineTo(i * mountainWidth + mountainWidth / 2, canvas.height - height);
+    c.lineTo(i * mountainWidth - 325, canvas.height);
+    c.fillStyle = color;
+    c.fill();
+    c.closePath();
+  }
+} // Implementation
+
+
+var backgroundGradient = c.createLinearGradient(0, 0, 0, canvas.height);
+backgroundGradient.addColorStop(0, '#171e26');
+backgroundGradient.addColorStop(1, '#3f586b');
+var stars;
+var miniStars;
+var backgroundStars;
+var ticker = 0;
+var randomSpawnRate = 75;
+var groundHeight = 70;
 
 function init() {
-  objects = [];
+  stars = [];
+  miniStars = [];
+  backgroundStars = []; // for (let i = 0; i < 1; i++) {
+  //   stars.push(new Star(canvas.width / 2, 30, 30, '#E3EAEF'))
+  // }
 
-  for (var i = 0; i < 400; i++) {// objects.push()
+  for (var i = 0; i < 150; i++) {
+    var x = Math.random() * canvas.width;
+    var y = Math.random() * canvas.height;
+    var radius = Math.random() * 3;
+    backgroundStars.push(new Star(x, y, radius, 'white'));
   }
 } // Animation Loop
 
 
 function animate() {
   requestAnimationFrame(animate);
-  c.clearRect(0, 0, canvas.width, canvas.height);
-  c.fillText('HTML CANVAS BOILERPLATE', mouse.x, mouse.y); // objects.forEach(object => {
-  //  object.update()
-  // })
+  c.fillStyle = backgroundGradient;
+  c.fillRect(0, 0, canvas.width, canvas.height);
+  backgroundStars.forEach(function (backgroundStar) {
+    backgroundStar.draw();
+  });
+  createMountainRange(1, canvas.height - 50, '#384551');
+  createMountainRange(2, canvas.height - 100, '#2B3843');
+  createMountainRange(3, canvas.height - 300, '#26333e');
+  c.fillStyle = '#182028';
+  c.fillRect(0, canvas.height - groundHeight, canvas.width, groundHeight);
+  stars.forEach(function (star, index) {
+    star.update();
+
+    if (star.radius == 0) {
+      stars.splice(index, 1);
+    }
+  });
+  miniStars.forEach(function (miniStar, index) {
+    miniStar.update();
+
+    if (miniStar.ttl == 0) {
+      miniStars.splice(index, 1);
+    }
+  });
+  ticker++;
+
+  if (ticker % randomSpawnRate == 0) {
+    var radius = 12;
+    var x = Math.max(radius, Math.random() * canvas.width - radius);
+    stars.push(new Star(x, -100, 12, 'white'));
+    randomSpawnRate = _utils__WEBPACK_IMPORTED_MODULE_0___default.a.randomIntFromRange(75, 200);
+  }
 }
 
 init();
